@@ -49,12 +49,6 @@ async def _lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 
 api = FastAPI(title=settings.api_name, lifespan=_lifespan)
-api.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 celery_app = create_celery()
 init_sentry()
 raw_payload_storage.configure(
@@ -94,5 +88,12 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
 
 
 api.include_router(head_router)
+
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app = api
