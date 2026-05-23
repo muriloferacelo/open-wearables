@@ -72,26 +72,6 @@ def user_id_from_endpoint(ep: EndpointOut) -> UUID | None:
 
 
 def _resolve_auth_token() -> str | None:
-    """Return the Svix auth token, generating it from the JWT secret if needed.
-
-    Priority:
-    1. Explicit ``SVIX_AUTH_TOKEN`` env var — use as-is.
-    2. ``SVIX_JWT_SECRET`` present — derive a token automatically (no manual step needed).
-    3. Neither set — webhooks disabled.
-    """
-    if settings.svix_auth_token is not None:
-        return settings.svix_auth_token.get_secret_value()
-    if settings.svix_jwt_secret is not None:
-        token = jwt.encode(
-            {"sub": _SVIX_ORG_ID},
-            settings.svix_jwt_secret.get_secret_value(),
-            algorithm="HS256",
-        )
-        logger.info("SVIX_AUTH_TOKEN not set — derived from SVIX_JWT_SECRET automatically.")
-        return token
-    logger.warning("Neither SVIX_AUTH_TOKEN nor SVIX_JWT_SECRET is set — outgoing webhooks are disabled.")
-    return None
-
 
 def _build_client() -> Svix | None:
     """Create the Svix client. Returns None when no credentials are configured.
@@ -101,6 +81,12 @@ def _build_client() -> Svix | None:
     Svix deployments.
     """
     token = _resolve_auth_token()
+    if len(token) > 30:
+    token_preview = f"{token[:20]}...{token[-10:]}"
+else:
+    token_preview = "***"
+logger.info("Svix client: token loaded (length=%d, preview=%s)", len(token), token_preview)
+logger.info("Svix client: connecting to %s", settings.svix_server_url or "https://api.svix.com")
     if token is None:
         return None
 
