@@ -135,6 +135,36 @@ def register_event_types() -> None:
                 settings.svix_server_url or "https://api.svix.com",
             )
             return
+        except HttpError as exc:
+            if exc.status_code == 401:
+                logger.error(
+                    "Svix authentication failed (401) — SVIX_AUTH_TOKEN is invalid, expired, or incorrect. "
+                    "Check your token at https://dashboard.svix.com/settings/api-keys"
+                )
+                return
+            elif exc.status_code == 409:
+                # Event type already exists, try to update
+                try:
+                    _client.event_type.update(evt.value, EventTypeUpdate(description=description))
+                except httpx.ConnectError:
+                    logger.warning(
+                        "Svix server unreachable at %s — skipping event type registration. "
+                        "Webhooks will be unavailable until the server is accessible.",
+                        settings.svix_server_url or "https://api.svix.com",
+                    )
+                    return
+                except HttpError as update_exc:
+                    if update_exc.status_code == 401:
+                        logger.error(
+                            "Svix authentication failed (401) — SVIX_AUTH_TOKEN is invalid, expired, or incorrect. "
+                            "Check your token at https://dashboard.svix.com/settings/api-keys"
+                        )
+                        return
+                    logger.exception("Failed to update event type %s", evt.value)
+                except Exception:
+                    logger.exception("Failed to update event type %s", evt.value)
+            else:
+                logger.exception("Failed to register event type %s (HTTP %d)", evt.value, exc.status_code)
         except Exception:
             try:
                 _client.event_type.update(evt.value, EventTypeUpdate(description=description))
@@ -145,6 +175,14 @@ def register_event_types() -> None:
                     settings.svix_server_url or "https://api.svix.com",
                 )
                 return
+            except HttpError as exc:
+                if exc.status_code == 401:
+                    logger.error(
+                        "Svix authentication failed (401) — SVIX_AUTH_TOKEN is invalid, expired, or incorrect. "
+                        "Check your token at https://dashboard.svix.com/settings/api-keys"
+                    )
+                    return
+                logger.exception("Failed to register/update event type %s", evt.value)
             except Exception:
                 logger.exception("Failed to register/update event type %s", evt.value)
 
