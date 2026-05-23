@@ -41,3 +41,5 @@ FROM python:3.13-slim
     ENV UV_NO_SYNC=true
 
     EXPOSE 8000
+
+CMD ["uvicorn", "app.main:api", "--host", "0.0.0.0", "--port", "8000"]
