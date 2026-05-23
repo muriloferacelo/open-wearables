@@ -107,6 +107,11 @@ def get_endpoint_secret(endpoint_id: str, app_id: SvixAppId) -> EndpointSecretRe
     return EndpointSecretResponse(key=key)
 
 
+@router.options("/event-types")
+def options_event_types() -> dict:
+    return {}
+
+
 @router.get("/event-types")
 def list_event_types() -> list[EventTypeResponse]:
     return [
