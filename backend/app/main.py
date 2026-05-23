@@ -9,14 +9,12 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.middleware.cors import CORSMiddleware
 
 from app.api import head_router
 from app.config import settings
 from app.integrations.celery import create_celery
 from app.integrations.sentry import init_sentry
-from app.middlewares import add_cors_middleware
 from app.services import raw_payload_storage
 from app.services.outgoing_webhooks import svix as svix_service
 from app.utils.exceptions import DatetimeParseError, handle_exception
@@ -50,19 +48,14 @@ async def _lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
-class OptionsMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        if request.method == "OPTIONS":
-            return Response(status_code=200, headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            })
-        return await call_next(request)
-
-
 api = FastAPI(title=settings.api_name, lifespan=_lifespan)
-api.add_middleware(OptionsMiddleware)
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 celery_app = create_celery()
 init_sentry()
 raw_payload_storage.configure(
@@ -86,24 +79,13 @@ async def root() -> dict[str, str]:
 
 @api.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    logger.info(f"RequestValidationError handler called: method={request.method}, path={request.url.path}")
-
-    # Return 200 for OPTIONS (CORS preflight) requests so FastAPI validation
-    # errors never override the middleware's intended 200 OK response.
-    if request.method == "OPTIONS":
-        logger.info(f"OPTIONS request detected, returning 200")
-        return JSONResponse(status_code=200, content={})
-
-    logger.info(f"Non-OPTIONS request, checking path")
     # (FastAPI ≥ 0.130 rejects empty required str form fields before the handler runs)
     if request.url.path.endswith("/auth/login"):
-        logger.info(f"Login path detected, returning 401")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Incorrect email or password"},
             headers={"WWW-Authenticate": "Bearer"},
         )
-    logger.info(f"Raising exception for path {request.url.path}")
     raise handle_exception(exc, "")
 
 
@@ -113,9 +95,5 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
 
 
 api.include_router(head_router)
-
-# Register CORS middleware via add_middleware so Starlette attaches CORS
-# headers to every response (including the 200 OK we return for OPTIONS).
-add_cors_middleware(api)
 
 app = api
