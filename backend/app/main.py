@@ -87,6 +87,29 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
     raise handle_exception(exc, "")
 
 
+class ForcesCORSMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_cors(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                # Add CORS headers
+                headers.append((b"access-control-allow-origin", b"*"))
+                headers.append((b"access-control-allow-methods", b"*"))
+                headers.append((b"access-control-allow-headers", b"*"))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_cors)
+
+
+api.add_middleware(ForcesCORSMiddleware)
 api.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
