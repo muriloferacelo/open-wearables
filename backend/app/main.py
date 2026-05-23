@@ -59,8 +59,6 @@ raw_payload_storage.configure(
     s3_endpoint_url=settings.raw_payload_s3_endpoint_url,
 )
 
-add_cors_middleware(api)
-
 # Mount static files for provider icons
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
@@ -90,3 +88,9 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
 
 
 api.include_router(head_router)
+
+# CORS middleware must be added LAST so it executes FIRST in the middleware
+# stack (Starlette middlewares run in reverse registration order). This ensures
+# OPTIONS preflight requests are intercepted and short-circuited before FastAPI
+# performs any request validation, preventing spurious 400 responses.
+add_cors_middleware(api)
