@@ -91,8 +91,8 @@ api.include_router(head_router)
 
 # Middlewares are registered in reverse execution order — the last one added
 # runs first. Registration order:
-#   1. add_cors_middleware  → attaches CORS headers to all responses
-#   2. app.add_middleware(OptionsMiddleware)  → runs FIRST, short-circuits all
-#      OPTIONS requests with 200 OK before FastAPI validation can fire
-add_cors_middleware(api)
+#   1. api.add_middleware(OptionsMiddleware)  → attaches CORS headers to all responses
+#   2. add_cors_middleware  → runs FIRST, adds CORS headers; then OptionsMiddleware
+#      short-circuits OPTIONS requests with 200 OK (headers already present)
 api.add_middleware(OptionsMiddleware)
+add_cors_middleware(api)
