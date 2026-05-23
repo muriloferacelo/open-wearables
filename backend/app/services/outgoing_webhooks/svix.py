@@ -76,7 +76,7 @@ def _resolve_auth_token() -> str | None:
     token = getattr(settings, "svix_auth_token", None)
     if not token:
         return None
-    return token
+    return token.get_secret_value()
 
 
 def _build_client() -> Svix | None:
