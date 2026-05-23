@@ -14,7 +14,7 @@ from app.api import head_router
 from app.config import settings
 from app.integrations.celery import create_celery
 from app.integrations.sentry import init_sentry
-from app.middlewares import add_cors_middleware
+from app.middlewares import OptionsMiddleware, add_cors_middleware
 from app.services import raw_payload_storage
 from app.services.outgoing_webhooks import svix as svix_service
 from app.utils.exceptions import DatetimeParseError, handle_exception
@@ -89,8 +89,10 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
 
 api.include_router(head_router)
 
-# CORS middleware must be added LAST so it executes FIRST in the middleware
-# stack (Starlette middlewares run in reverse registration order). This ensures
-# OPTIONS preflight requests are intercepted and short-circuited before FastAPI
-# performs any request validation, preventing spurious 400 responses.
+# Middlewares are registered in reverse execution order — the last one added
+# runs first. Registration order:
+#   1. add_cors_middleware  → attaches CORS headers to all responses
+#   2. app.add_middleware(OptionsMiddleware)  → runs FIRST, short-circuits all
+#      OPTIONS requests with 200 OK before FastAPI validation can fire
 add_cors_middleware(api)
+api.add_middleware(OptionsMiddleware)
