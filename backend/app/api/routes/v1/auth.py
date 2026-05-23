@@ -6,11 +6,33 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.config import settings
 from app.database import DbSession
 from app.schemas.auth import TokenResponse
-from app.schemas.model_crud.user_management import DeveloperRead, DeveloperUpdate, PasswordChange
+from app.schemas.model_crud.user_management import DeveloperCreate, DeveloperRead, DeveloperUpdate, PasswordChange
 from app.services import DeveloperDep, developer_service, refresh_token_service
 from app.utils.security import create_access_token, verify_password
 
 router = APIRouter()
+
+
+@router.post("/register", response_model=DeveloperRead, status_code=status.HTTP_201_CREATED)
+def register(
+    payload: DeveloperCreate,
+    db: DbSession,
+) -> DeveloperRead:
+    """Register a new developer account."""
+    existing = developer_service.crud.get_all(
+        db,
+        filters={"email": payload.email},
+        offset=0,
+        limit=1,
+        sort_by=None,
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A developer with this email already exists",
+        )
+
+    return developer_service.register(db, payload)
 
 
 @router.post("/login")
