@@ -42,4 +42,7 @@ FROM python:3.13-slim
 
     EXPOSE 8000
 
-    CMD sh -c "uvicorn app.main:api --host 0.0.0.0 --port ${PORT:-8000}"
+    COPY entrypoint.sh /entrypoint.sh
+    RUN chmod +x /entrypoint.sh
+
+    CMD ["/entrypoint.sh"]
