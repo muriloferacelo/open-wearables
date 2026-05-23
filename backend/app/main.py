@@ -89,10 +89,11 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
 
 api.include_router(head_router)
 
-# Middlewares are registered in reverse execution order — the last one added
-# runs first. Registration order:
-#   1. api.add_middleware(OptionsMiddleware)  → attaches CORS headers to all responses
-#   2. add_cors_middleware  → runs FIRST, adds CORS headers; then OptionsMiddleware
-#      short-circuits OPTIONS requests with 200 OK (headers already present)
-api.add_middleware(OptionsMiddleware)
+# Register CORS middleware via add_middleware so Starlette attaches CORS
+# headers to every response (including the 200 OK we return for OPTIONS).
 add_cors_middleware(api)
+
+# Wrap the fully-configured FastAPI app with the pure ASGI OptionsMiddleware.
+# This sits *outside* the entire Starlette/FastAPI stack, so it intercepts
+# OPTIONS requests before any routing or request-validation logic runs.
+app = OptionsMiddleware(api)
