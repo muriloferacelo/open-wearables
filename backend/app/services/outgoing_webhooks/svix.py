@@ -109,7 +109,11 @@ def is_enabled() -> bool:
 
 
 def register_event_types() -> None:
-    """Create / update every WebhookEventType in Svix (idempotent)."""
+    """Create / update every WebhookEventType in Svix (idempotent).
+
+    Failures due to the Svix server being unreachable are logged as a single
+    warning and do not prevent application startup — Svix is an optional feature.
+    """
     if not is_enabled():
         return
     assert _client is not None
@@ -118,9 +122,23 @@ def register_event_types() -> None:
         try:
             _client.event_type.create(EventTypeIn(name=evt.value, description=description))
             logger.info("Registered event type: %s", evt.value)
+        except httpx.ConnectError:
+            logger.warning(
+                "Svix server unreachable at %s — skipping event type registration. "
+                "Webhooks will be unavailable until the server is accessible.",
+                settings.svix_server_url,
+            )
+            return
         except Exception:
             try:
                 _client.event_type.update(evt.value, EventTypeUpdate(description=description))
+            except httpx.ConnectError:
+                logger.warning(
+                    "Svix server unreachable at %s — skipping event type registration. "
+                    "Webhooks will be unavailable until the server is accessible.",
+                    settings.svix_server_url,
+                )
+                return
             except Exception:
                 logger.exception("Failed to register/update event type %s", evt.value)
 
