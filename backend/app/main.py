@@ -72,19 +72,24 @@ async def root() -> dict[str, str]:
 
 @api.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    if request.method == "OPTIONS":
-    return JSONResponse(status_code=200, content={})
+    logger.info(f"RequestValidationError handler called: method={request.method}, path={request.url.path}")
+
     # Return 200 for OPTIONS (CORS preflight) requests so FastAPI validation
     # errors never override the middleware's intended 200 OK response.
     if request.method == "OPTIONS":
+        logger.info(f"OPTIONS request detected, returning 200")
         return JSONResponse(status_code=200, content={})
+
+    logger.info(f"Non-OPTIONS request, checking path")
     # (FastAPI ≥ 0.130 rejects empty required str form fields before the handler runs)
     if request.url.path.endswith("/auth/login"):
+        logger.info(f"Login path detected, returning 401")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Incorrect email or password"},
             headers={"WWW-Authenticate": "Bearer"},
         )
+    logger.info(f"Raising exception for path {request.url.path}")
     raise handle_exception(exc, "")
 
 
