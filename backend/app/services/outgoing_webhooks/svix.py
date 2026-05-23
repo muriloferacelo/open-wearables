@@ -92,6 +92,7 @@ def _resolve_auth_token() -> str | None:
     logger.warning("Neither SVIX_AUTH_TOKEN nor SVIX_JWT_SECRET is set — outgoing webhooks are disabled.")
     return None
 
+
 def _build_client() -> Svix | None:
     """Create the Svix client. Returns None when no credentials are configured.
 
@@ -119,6 +120,9 @@ def _build_client() -> Svix | None:
     
     options = SvixOptions(server_url=settings.svix_server_url) if settings.svix_server_url else SvixOptions()
     return Svix(token, options)
+
+
+_client: Svix | None = _build_client()
 
 
 def is_enabled() -> bool:
