@@ -87,31 +87,14 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
     raise handle_exception(exc, "")
 
 
-class ForcesCORSMiddleware:
-    def __init__(self, app):
-        self.app = app
+api.include_router(head_router)
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        async def send_with_cors(message):
-            if message["type"] == "http.response.start":
-                headers = list(message.get("headers", []))
-                # Add CORS headers
-                headers.append((b"access-control-allow-origin", b"*"))
-                headers.append((b"access-control-allow-methods", b"*"))
-                headers.append((b"access-control-allow-headers", b"*"))
-                message["headers"] = headers
-            await send(message)
-
-        await self.app(scope, receive, send_with_cors)
-
-
-api.add_middleware(ForcesCORSMiddleware)
-api.add_middleware(
-    CORSMiddleware,
+# Wrap the app with CORSMiddleware at the ASGI level to ensure CORS headers
+# are added even for 500 errors and unhandled exceptions.
+# FastAPI's ServerErrorMiddleware bypasses middleware added via add_middleware(),
+# so wrapping the entire ASGI app here makes CORSMiddleware the outermost layer.
+app = CORSMiddleware(
+    api,
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
@@ -119,7 +102,3 @@ api.add_middleware(
     expose_headers=["*"],
     max_age=600,
 )
-
-api.include_router(head_router)
-
-app = api
