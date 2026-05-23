@@ -87,13 +87,16 @@ async def datetime_parse_exception_handler(_: Request, exc: DatetimeParseError) 
     raise handle_exception(exc, "")
 
 
-api.include_router(head_router)
-
 api.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
+
+api.include_router(head_router)
 
 app = api
