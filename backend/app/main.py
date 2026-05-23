@@ -72,6 +72,10 @@ async def root() -> dict[str, str]:
 
 @api.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    # Return 200 for OPTIONS (CORS preflight) requests so FastAPI validation
+    # errors never override the middleware's intended 200 OK response.
+    if request.method == "OPTIONS":
+        return JSONResponse(status_code=200, content={})
     # (FastAPI ≥ 0.130 rejects empty required str form fields before the handler runs)
     if request.url.path.endswith("/auth/login"):
         return JSONResponse(
