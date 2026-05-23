@@ -94,11 +94,17 @@ def _resolve_auth_token() -> str | None:
 
 
 def _build_client() -> Svix | None:
-    """Create the Svix client. Returns None when no credentials are configured."""
+    """Create the Svix client. Returns None when no credentials are configured.
+
+    When ``SVIX_SERVER_URL`` is unset the Svix SDK connects to Svix Cloud
+    (https://api.svix.com).  Set ``SVIX_SERVER_URL`` only for self-hosted
+    Svix deployments.
+    """
     token = _resolve_auth_token()
     if token is None:
         return None
-    return Svix(token, SvixOptions(server_url=settings.svix_server_url))
+    options = SvixOptions(server_url=settings.svix_server_url) if settings.svix_server_url else SvixOptions()
+    return Svix(token, options)
 
 
 _client: Svix | None = _build_client()
@@ -126,7 +132,7 @@ def register_event_types() -> None:
             logger.warning(
                 "Svix server unreachable at %s — skipping event type registration. "
                 "Webhooks will be unavailable until the server is accessible.",
-                settings.svix_server_url,
+                settings.svix_server_url or "https://api.svix.com",
             )
             return
         except Exception:
@@ -136,7 +142,7 @@ def register_event_types() -> None:
                 logger.warning(
                     "Svix server unreachable at %s — skipping event type registration. "
                     "Webhooks will be unavailable until the server is accessible.",
-                    settings.svix_server_url,
+                    settings.svix_server_url or "https://api.svix.com",
                 )
                 return
             except Exception:

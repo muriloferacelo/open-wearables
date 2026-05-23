@@ -183,10 +183,12 @@ class Settings(BaseSettings):
     raw_payload_s3_endpoint_url: str | None = None  # for S3-compatible storage (e.g. Railway Object Storage)
 
     # SVIX WEBHOOK SETTINGS
-    svix_server_url: str = "http://svix-server:8071"
-    # Signing secret used by the Svix server to verify JWTs.  Must match SVIX_JWT_SECRET in docker-compose.
+    # When using Svix Cloud, set SVIX_AUTH_TOKEN and leave SVIX_SERVER_URL unset.
+    # When using a self-hosted Svix server, set SVIX_SERVER_URL to point at it.
+    svix_server_url: str | None = None
+    # Signing secret used by a self-hosted Svix server to verify JWTs.  Must match SVIX_JWT_SECRET in docker-compose.
     svix_jwt_secret: SecretStr | None = None
-    # Bearer token for the Svix API.  If unset, auto-generated from svix_jwt_secret at startup.
+    # Bearer token for the Svix API (required for Svix Cloud; auto-generated from svix_jwt_secret for self-hosted).
     svix_auth_token: SecretStr | None = None
 
     @model_validator(mode="after")
