@@ -9,6 +9,8 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.api import head_router
 from app.config import settings
@@ -48,7 +50,19 @@ async def _lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
+class OptionsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if request.method == "OPTIONS":
+            return Response(status_code=200, headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            })
+        return await call_next(request)
+
+
 api = FastAPI(title=settings.api_name, lifespan=_lifespan)
+api.add_middleware(OptionsMiddleware)
 celery_app = create_celery()
 init_sentry()
 raw_payload_storage.configure(
