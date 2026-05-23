@@ -222,11 +222,21 @@ class Settings(BaseSettings):
     @classmethod
     def strip_svix_auth_token(cls, v: SecretStr | None) -> SecretStr | None:
         """Strip whitespace from Svix auth token to handle copy-paste errors."""
+        import logging
+        logger = logging.getLogger(__name__)
+
         if v is None:
+            logger.warning("SVIX_AUTH_TOKEN is None (not set in environment)")
             return None
+
         token_value = v.get_secret_value().strip()
+        logger.info("SVIX_AUTH_TOKEN loaded from environment (length=%d)", len(token_value))
+
         if not token_value:
+            logger.warning("SVIX_AUTH_TOKEN is empty after stripping whitespace")
             return None
+
+        logger.info("SVIX_AUTH_TOKEN is valid (length=%d)", len(token_value))
         return SecretStr(token_value)
 
     @field_validator("cors_origins", mode="after")
