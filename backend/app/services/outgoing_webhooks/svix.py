@@ -81,10 +81,15 @@ def _resolve_auth_token() -> str | None:
     """
     if settings.svix_auth_token is not None:
         token_value = settings.svix_auth_token.get_secret_value()
+        # Log token details for debugging (safe: only shows prefix/suffix/length)
+        if len(token_value) > 30:
+            token_preview = f"{token_value[:20]}...{token_value[-10:]}"
+        else:
+            token_preview = "***"
         logger.info(
-            "Using explicit SVIX_AUTH_TOKEN (length=%d, starts_with=%s)",
+            "Using SVIX_AUTH_TOKEN from environment (length=%d, preview=%s)",
             len(token_value),
-            token_value[:10] + "..." if len(token_value) > 10 else "***",
+            token_preview,
         )
         return token_value
     if settings.svix_jwt_secret is not None:
