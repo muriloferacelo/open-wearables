@@ -80,7 +80,13 @@ def _resolve_auth_token() -> str | None:
     3. Neither set — webhooks disabled.
     """
     if settings.svix_auth_token is not None:
-        return settings.svix_auth_token.get_secret_value()
+        token_value = settings.svix_auth_token.get_secret_value()
+        logger.info(
+            "Using explicit SVIX_AUTH_TOKEN (length=%d, starts_with=%s)",
+            len(token_value),
+            token_value[:10] + "..." if len(token_value) > 10 else "***",
+        )
+        return token_value
     if settings.svix_jwt_secret is not None:
         token = jwt.encode(
             {"sub": _SVIX_ORG_ID},
@@ -103,6 +109,8 @@ def _build_client() -> Svix | None:
     token = _resolve_auth_token()
     if token is None:
         return None
+    server_url = settings.svix_server_url or "https://api.svix.com"
+    logger.info("Initializing Svix client with server_url=%s", server_url)
     options = SvixOptions(server_url=settings.svix_server_url) if settings.svix_server_url else SvixOptions()
     return Svix(token, options)
 
