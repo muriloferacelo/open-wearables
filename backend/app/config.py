@@ -218,6 +218,17 @@ class Settings(BaseSettings):
             self.oura_webhook_verification_token = SecretStr(self.secret_key)
         return self
 
+    @field_validator("svix_auth_token", mode="after")
+    @classmethod
+    def strip_svix_auth_token(cls, v: SecretStr | None) -> SecretStr | None:
+        """Strip whitespace from Svix auth token to handle copy-paste errors."""
+        if v is None:
+            return None
+        token_value = v.get_secret_value().strip()
+        if not token_value:
+            return None
+        return SecretStr(token_value)
+
     @field_validator("cors_origins", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
