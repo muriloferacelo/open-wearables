@@ -52,7 +52,6 @@ api = FastAPI(title=settings.api_name, lifespan=_lifespan)
 api.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
